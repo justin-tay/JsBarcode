@@ -3628,6 +3628,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var svgns = "http://www.w3.org/2000/svg";
 
+var idSeq = 1;
+
 var SVGRenderer = function () {
 	function SVGRenderer(svg, encodings, options) {
 		_classCallCheck(this, SVGRenderer);
@@ -3636,11 +3638,51 @@ var SVGRenderer = function () {
 		this.encodings = encodings;
 		this.options = options;
 		this.document = options.xmlDocument || document;
+
+		if (!options.xmlDocument) {
+			this.createStylesheet();
+		}
 	}
 
 	_createClass(SVGRenderer, [{
+		key: "createStylesheet",
+		value: function createStylesheet() {
+			if (!this.svg.id) {
+				this.svg.id = 'jsbc' + idSeq++;
+			}
+			var styleId = this.svg.id + '_jsbcstyle';
+			if (!document.getElementById(styleId)) {
+				var head = document.head || document.getElementsByTagName('head')[0];
+				var style = document.createElement('style');
+				style.id = styleId;
+				var nonce = this.options.nonce;
+				if (!nonce) {
+					var cspNonce = document.querySelector('meta[property=csp-nonce]');
+					if (cspNonce) {
+						nonce = cspNonce.nonce;
+					}
+				}
+				if (nonce) {
+					style.setAttribute('nonce', nonce);
+				}
+				style.setAttribute('type', 'text/css');
+				style.textContent = "\n\t\t\t\t#" + this.svg.id + " {\n\t\t\t\t\ttransform: translate(0,0);\n\t\t\t\t}\n\t\t\t";
+				if (this.options.background) {
+					style.textContent += "\n\t\t\t\t#" + this.svg.id + " > rect {\n\t\t\t\t\tfill: " + this.options.background + ";\n\t\t\t\t}\n\t\t\t\t";
+				}
+				if (this.options.lineColor) {
+					style.textContent += "\n\t\t\t\t#" + this.svg.id + " g {\n\t\t\t\t\tfill: " + this.options.lineColor + ";\n\t\t\t\t}\n\t\t\t\t";
+				}
+				if (this.options.fontOptions || this.options.fontSize || this.options.font) {
+					style.textContent += "\n\t\t\t\t#" + this.svg.id + " text {\n\t\t\t\t\tfont: " + this.options.fontOptions + " " + this.options.fontSize + "px " + this.options.font + ";\n\t\t\t\t}\n\t\t\t\t";
+				}
+				head.appendChild(style);
+			}
+		}
+	}, {
 		key: "render",
 		value: function render() {
+
 			var currentX = this.options.marginLeft;
 
 			this.prepareSVG();
@@ -3674,7 +3716,10 @@ var SVGRenderer = function () {
 			this.setSvgAttributes(width, maxHeight);
 
 			if (this.options.background) {
-				this.drawRect(0, 0, width, maxHeight, this.svg).setAttribute("style", "fill:" + this.options.background + ";");
+				var rect = this.drawRect(0, 0, width, maxHeight, this.svg);
+				if (this.options.xmlDocument) {
+					rect.setAttribute("style", "fill:" + this.options.background + ";");
+				}
 			}
 		}
 	}, {
@@ -3717,7 +3762,9 @@ var SVGRenderer = function () {
 			if (options.displayValue) {
 				var x, y;
 
-				textElem.setAttribute("style", "font:" + options.fontOptions + " " + options.fontSize + "px " + options.font);
+				if (options.xmlDocument) {
+					textElem.setAttribute("style", "font:" + options.fontOptions + " " + options.fontSize + "px " + options.font);
+				}
 
 				if (options.textPosition == "top") {
 					y = options.fontSize - options.textMargin;
@@ -3760,7 +3807,9 @@ var SVGRenderer = function () {
 			svg.setAttribute("xmlns", svgns);
 			svg.setAttribute("version", "1.1");
 
-			svg.setAttribute("style", "transform: translate(0,0)");
+			if (this.options.xmlDocument) {
+				svg.setAttribute("style", "transform: translate(0,0)");
+			}
 		}
 	}, {
 		key: "createGroup",
@@ -3775,7 +3824,9 @@ var SVGRenderer = function () {
 	}, {
 		key: "setGroupOptions",
 		value: function setGroupOptions(group, options) {
-			group.setAttribute("style", "fill:" + options.lineColor + ";");
+			if (options.xmlDocument) {
+				group.setAttribute("style", "fill:" + options.lineColor + ";");
+			}
 		}
 	}, {
 		key: "drawRect",
